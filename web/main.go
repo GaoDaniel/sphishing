@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
+	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/google/uuid"
 )
-
-// TODO: support finetune / non-finetune
 
 type StatsInner struct {
 	Filename      string          `json:"filename"`
@@ -109,7 +110,7 @@ func (s *Stats) load() error {
 	return nil
 }
 
-// returns whether code exists
+// returns whether successfully redeemed
 func (s *Stats) Redeem(code string) (bool, error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
@@ -119,19 +120,22 @@ func (s *Stats) Redeem(code string) (bool, error) {
 	}
 
 	redeemed, present := s.Stats.Codes[code]
+
 	if !present {
 		return false, nil
 	} else if redeemed {
 		// redeem the code
 		s.Stats.Codes[code] = false
 		s.Stats.Clicks++
+		return true, nil
 	}
 
 	if err := s.flush(); err != nil {
 		return false, err
 	}
 
-	return true, nil
+	// either code does not exist or it has been redeemed
+	return false, nil
 }
 
 // realism score
@@ -159,12 +163,15 @@ func (s *Stats) SetScore(code string, score int) error {
 		return err
 	}
 
-	_, present := s.Stats.RealismScores[code]
+	currScore, present := s.Stats.RealismScores[code]
 	if !present {
 		return errors.New("code does not exist")
 	}
 
-	s.Stats.RealismScores[code] = score
+	if currScore == -1 {
+		s.Stats.RealismScores[code] = score
+	}
+
 	if err := s.flush(); err != nil {
 		return err
 	}
@@ -180,20 +187,63 @@ func main() {
 		panic("failed to create stats struct")
 	}
 
-	http.HandleFunc("/redeem", func(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("rate.html"))
+
+	http.HandleFunc("/rate", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodPost {
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+
 		code := r.URL.Query().Get("code")
-		fmt.Printf("redeeming %s...\n", code)
+
+		if r.Method == http.MethodGet {
+			tmpl.Execute(w, code)
+		} else if r.Method == http.MethodPost {
+			r.ParseForm()
+			score, err := strconv.Atoi(r.Form.Get("score"))
+			if err != nil {
+				http.Error(w, "invalid score", http.StatusBadRequest)
+			}
+			if score >= 1 && score <= 5 {
+				log.Printf("setting score for %s to %d...\n", code, score)
+				err := stats.SetScore(code, score)
+				if err != nil {
+					http.Error(w, "error setting score", http.StatusBadRequest)
+					log.Println(err.Error())
+					return
+				} else {
+					fmt.Fprintln(w, "success!")
+					return
+				}
+			} else {
+				http.Error(w, "score must be between 1 and 5 inclusive", http.StatusBadRequest)
+				return
+			}
+		} else {
+
+		}
+	})
+
+	http.HandleFunc("/redeem", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+
+		code := r.URL.Query().Get("code")
+		log.Printf("redeeming %s...\n", code)
 		found, err := stats.Redeem(code)
 
 		if err != nil {
 			fmt.Fprintln(w, "failed to redeem")
+		} else if !found {
+			fmt.Fprintln(w, "code does not exist or has been redeemed already")
 		} else {
-			fmt.Printf("found: %t\n", found)
-			fmt.Fprintln(w, found)
-
-			// TODO: redirect to user page
+			http.Redirect(w, r, "/rate?code="+code, http.StatusSeeOther)
 		}
 	})
 
+	log.Println("starting server...")
 	http.ListenAndServe(":80", nil)
 }

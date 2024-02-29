@@ -1,0 +1,17 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Simulated Phishing Attack</title>
+</head>
+<body>
+  <h1>Simulated Phishing Attack</h1>
+  <p>You clicked the link! This was a test to see how susceptible you are to phishing, as part of a group project for CSE 493G1 (Deep Learning) Winter 2024.</p>
+  <p>On a scale of 1-5, with 1 being the least realistic (felt like an obvious scam) and 5 being the most realistic (could not tell whether it was a scam), please rate our simulated phishing attack.</p>
+  <form action="/rate?code={{.}}" method="post">
+    <input type="range" name="score" min="1" max="5">
+    <input type="submit" value="Submit"/>
+  </form>
+</body>
+</html>
