@@ -190,6 +190,8 @@ func main() {
 		} else {
 			fmt.Printf("found: %t\n", found)
 			fmt.Fprintln(w, found)
+
+			// TODO: redirect to user page
 		}
 	})
 
