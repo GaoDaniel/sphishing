@@ -12,6 +12,8 @@ course_nums = {
     'CAREER': 855,
 }
 
+# place your jwt token in .env (key should be TOKEN)
+
 # change this value to scrape different boards
 # this is the only parameter to change
 # will write to a file of the same name as BOARD
