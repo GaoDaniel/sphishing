@@ -17,7 +17,7 @@ course_nums = {
 # change this value to scrape different boards
 # this is the only parameter to change
 # will write to a file of the same name as BOARD
-BOARD = 'UGRAD'
+BOARD = 'CAREER'
 
 API = f'https://us.edstem.org/api/courses/{course_nums[BOARD]}/threads'
 
@@ -29,7 +29,13 @@ thread_api = lambda tid: f'https://us.edstem.org/api/threads/{tid}?view=1'
 threads_lk = threading.Lock()
 
 def get_thread(url, threads):
-    thread = requests.get(url, headers=headers).json()
+    while True:
+        thread = requests.get(url, headers=headers).json()
+        if 'code' in thread and thread['code'] == 'rate_limit':
+            time.sleep(3)
+            continue
+        break
+
     threads_lk.acquire()
     threads.append(thread)
     threads_lk.release()
@@ -76,7 +82,6 @@ if __name__ == '__main__':
             thd.join()
     
         print(f'processed {count} threads')
-        time.sleep(3)
     
     with open(f'{BOARD}.json', 'w') as f:
         f.write(json.dumps(threads))
