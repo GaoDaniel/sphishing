@@ -119,19 +119,20 @@ func (s *Stats) Redeem(code string) (bool, error) {
 		return false, err
 	}
 
-	redeemed, present := s.Stats.Codes[code]
+	valid, present := s.Stats.Codes[code]
 
 	if !present {
 		return false, nil
-	} else if redeemed {
+	} else if valid {
 		// redeem the code
 		s.Stats.Codes[code] = false
 		s.Stats.Clicks++
-		return true, nil
-	}
 
-	if err := s.flush(); err != nil {
-		return false, err
+		if err := s.flush(); err != nil {
+			return false, err
+		}
+
+		return true, nil
 	}
 
 	// either code does not exist or it has been redeemed
@@ -163,14 +164,12 @@ func (s *Stats) SetScore(code string, score int) error {
 		return err
 	}
 
-	currScore, present := s.Stats.RealismScores[code]
+	_, present := s.Stats.RealismScores[code]
 	if !present {
 		return errors.New("code does not exist")
 	}
 
-	if currScore == -1 {
-		s.Stats.RealismScores[code] = score
-	}
+	s.Stats.RealismScores[code] = score
 
 	if err := s.flush(); err != nil {
 		return err
@@ -220,8 +219,6 @@ func main() {
 				http.Error(w, "score must be between 1 and 5 inclusive", http.StatusBadRequest)
 				return
 			}
-		} else {
-
 		}
 	})
 
@@ -245,5 +242,5 @@ func main() {
 	})
 
 	log.Println("starting server...")
-	http.ListenAndServe(":80", nil)
+	http.ListenAndServe(":8100", nil)
 }

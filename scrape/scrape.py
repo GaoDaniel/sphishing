@@ -18,7 +18,6 @@ course_nums = {
 # this is the only parameter to change
 # will write to a file of the same name as BOARD
 BOARD = 'CAREER'
-
 API = f'https://us.edstem.org/api/courses/{course_nums[BOARD]}/threads'
 
 # api for top-level threads

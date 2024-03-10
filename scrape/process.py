@@ -1,5 +1,4 @@
 import json
-import sys
 
 def get_text_content(post, docs, is_admin=lambda _: True):
     if is_admin(post):
@@ -33,9 +32,11 @@ def get_posts(threads):
         get_text_content(thread, posts)
     return posts
 
-
 with open('UGRAD.json', 'r') as f:
     threads = json.loads(f.read())
 
 staff_posts = get_staff_posts(threads)
 posts = get_posts(threads)
+
+print(len(posts))
+print(len(staff_posts))
